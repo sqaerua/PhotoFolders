@@ -16,7 +16,7 @@ public class FoldersStructure {
 	String lastSubFolderPath = null;
 
 	public void finalBuilder() {
-		// возвращет список папок в исходной папке
+		// возвращет список папок в исходной папке "sourseFolderPath"
 		List<String> listTopLevelFolders = getListFolderTopLevel(sourseFolderPath);
 		Iterator<String> listFolders = listTopLevelFolders.iterator();
 		// проходит по всем папкам в исходной папке
