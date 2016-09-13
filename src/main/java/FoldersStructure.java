@@ -1,9 +1,12 @@
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Directory;
@@ -11,46 +14,81 @@ import com.drew.metadata.Metadata;
 import com.drew.metadata.Tag;
 
 public class FoldersStructure {
-	String sourseFolderPath = null;
-	String targetFolderPath = null;
+	String sourseFolderPath = "/Users/macos/Tools/fotoFolderTest/";
+	String targetFolderPath = "/Users/macos/Tools/Test1/";
 	String lastSubFolderPath = null;
 
+	public static void main(String[] arg) {
+		FoldersStructure fs = new FoldersStructure();
+		fs.finalBuilder();
+	}
+
 	public void finalBuilder() {
-		// возвращет список папок в исходной папке "sourseFolderPath"
-		List<String> listTopLevelFolders = getListFolderTopLevel(sourseFolderPath);
-		Iterator<String> listFolders = listTopLevelFolders.iterator();
-		// проходит по всем папкам в исходной папке
-		while (listFolders.hasNext()) {
-			// заходит в папку, проверяет если там есть еще папки, заходит в
-			// первую и так далее пока,
-			// не дойдет до папки в которой не будет вложенных папок
-			// возвращает имя папки короая не содержит других папок
-			String lowFolderPath = diveDownLowLevelFolderStructure(listFolders.next());
-			// возвращает лист путей к файлам с именами файлов, содеращимся в
-			// папке
-			List<String> listFilesFullPath = getListFilesAtFolder(lowFolderPath);
-			Iterator<String> listPhoto = listFilesFullPath.iterator();
-			// проходит по всем файлам в папке
-			while (listPhoto.hasNext()) {
-				// возваращет путь к файлу с именем файла
-				String fileNameSourceFullPath = listPhoto.next();
-				// возвращает информацию о файле, дату создания
-				HashMap<String, String> fileDate = getFileInfoDateCreation(fileNameSourceFullPath);
-				// в заданной папке,создает структуру папок основываясь на дате
-				// создания файла
-				String finalPath = folderStructurForFileCreation(targetFolderPath, fileDate);
-				// копирует файл в папку которая была созданана основании даты
-				// создания файла
-				String fileNameFullTargetPath = copyFileToTargetFolder(finalPath, fileNameSourceFullPath);
-				// сравнивает исходный файл и созданный, если равны удаляет
-				// оригинал
-				if (compareSourceAndTargetFile(fileNameSourceFullPath, fileNameFullTargetPath)) {
-					deleteSourceFile(fileNameSourceFullPath);
+
+		List<String> listFilesFullPath = null;
+		String lowFolderPath = "";
+
+		while ((new File(sourseFolderPath).listFiles().length) != 0) {
+
+			// возвращет список папок в исходной папке
+			List<String> listTopLevelFolders = getListFolderTopLevel(sourseFolderPath);
+			// проходит по всем папкам в исходной папке
+			Iterator<String> listFolders = listTopLevelFolders.iterator();
+			listFolders.hasNext();
+
+			if (!listTopLevelFolders.isEmpty()) {
+				// заходит в папку, проверяет если там есть еще папки, заходит в
+				// первую и так далее пока,
+				// не дойдет до папки в которой не будет вложенных папок
+				// возвращает имя папки короая не содержит других папок
+				lowFolderPath = diveDownLowLevelFolderStructure(listFolders.next());
+				listFilesFullPath = getListFilesAtFolder(lowFolderPath);
+			} else {
+				listFilesFullPath = getListFilesAtFolder(sourseFolderPath);
+			}
+
+			// возвращет список папок в исходной папке "sourseFolderPath"
+			listTopLevelFolders = getListFolderTopLevel(sourseFolderPath);
+			listFolders = listTopLevelFolders.iterator();
+			// проходит по всем папкам в исходной папке
+			while (listFolders.hasNext()) {
+				// заходит в папку, проверяет если там есть еще папки, заходит в
+				// первую и так далее пока,
+				// не дойдет до папки в которой не будет вложенных папок
+				// возвращает имя папки короая не содержит других папок
+				lowFolderPath = diveDownLowLevelFolderStructure(listFolders.next());
+
+				// возвращает лист путей к файлам с именами файлов, содеращимся
+				// в
+				// папке
+				Iterator<String> listPhoto = listFilesFullPath.iterator();
+				// проходит по всем файлам в папке
+				while (listPhoto.hasNext()) {
+					// возваращет путь к файлу с именем файла
+					String fileNameSourceFullPath = listPhoto.next();
+					// возвращает информацию о файле, дату создания
+					HashMap<String, String> fileDate = getFileInfoDateCreation(fileNameSourceFullPath);
+					// в заданной папке,создает структуру папок основываясь на
+					// дате
+					// создания файла
+					String finalPath = folderStructurForFileCreation(targetFolderPath, fileDate);
+					// копирует файл в папку которая была созданана основании
+					// даты
+					// создания файла
+					String fileNameFullTargetPath = copyFileToTargetFolder(finalPath, fileNameSourceFullPath);
+					// сравнивает исходный файл и созданный, если равны удаляет
+					// оригинал
+					if (compareSourceAndTargetFile(fileNameSourceFullPath, fileNameFullTargetPath)) {
+						deleteSourceFile(fileNameSourceFullPath);
+					}
+				}
+				// после того как все файлы из папки скопированны и удалены,
+				// удаляет
+				// саму папку
+				if (!lowFolderPath.isEmpty()) {
+					deleteEmptyFolder(lowFolderPath);
 				}
 			}
-			// после того как все файлы из папки скопированны и удалены, удаляет
-			// саму папку
-			deleteEmptyFolder(lowFolderPath);
 		}
 	}
 
@@ -62,17 +100,43 @@ public class FoldersStructure {
 		return false;
 	}
 
-	private void deleteEmptyFolder(String lowFolderPath) {
+	private boolean deleteEmptyFolder(String lowFolderPath) {
+		File directory = new File(lowFolderPath);
+		if (directory.delete()) {
+			System.out.println("Folder " + directory + " has been deleted!");
+			return true;
+		} else {
+			System.out.println("Folder " + directory + " is not empty");
+			return false;
+		}
 
 	}
 
 	private List<String> getListFolderTopLevel(String sourseFolderPath2) {
-		return null;
+		List<String> folders = new ArrayList<String>();
+		File[] directories = new File(sourseFolderPath2).listFiles();
+		for (File folder : directories) {
+			if (folder.isDirectory()) {
+				folders.add(folder.getAbsolutePath());
+			}
+		}
+		return folders;
 	}
 
 	private String copyFileToTargetFolder(String finalPath, String fileNameSourceFullPath) {
-		return null;
+		File src = new File(fileNameSourceFullPath);
+		File target = new File(finalPath + getFileName(fileNameSourceFullPath));
+		try {
+			Files.copy(src.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return finalPath + getFileName(fileNameSourceFullPath);
+	}
 
+	public String getFileName(String fullPathFileName) {
+		String[] names = fullPathFileName.split("/");
+		return names[names.length - 1];
 	}
 
 	private String folderStructurForFileCreation(String targetFolderPath, HashMap<String, String> fileDate) {
@@ -143,7 +207,9 @@ public class FoldersStructure {
 		List<String> listFiles = new ArrayList<String>();
 		String[] files = directory.list();
 		for (int i = 0; i < files.length; i++) {
-			listFiles.add(lowFolderPath + "/" + files[i]);
+			if (files[i].contains(".jpg")) {
+				listFiles.add(lowFolderPath + files[i]);
+			}
 		}
 		return listFiles;
 	}
@@ -155,7 +221,7 @@ public class FoldersStructure {
 
 		for (String name : names) {
 			if (new File(file.getPath() + "/" + name).isDirectory()) {
-				folder = file.getPath() + "/" + name;
+				folder = file.getPath() + "/" + name + "/";
 				break;
 			}
 		}
